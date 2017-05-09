@@ -150,6 +150,7 @@ class DOIImportObject extends IslandoraImportObject {
       module_load_include('inc', 'islandora_doi', 'includes/utilities');
       $doi_xml = simplexml_load_string($this->source);
       $this->mods = islandora_doi_transform_to_mods($doi_xml)->asXML();
+      $this->mods = substr($this->mods, strpos($this->mods, '?'.'>') + 2);
     }
 
     return $this->mods;
