@@ -44,20 +44,25 @@ function islandora_scholar_pdf_upload_form(array $form, array &$form_state) {
     '#type' => 'radios',
     '#title' => t('Document Version'),
     '#options' => array(
-      'PRE-PUBLICATION' => t('Pre-Publication'),
-      'PUBLISHED' => t('Published'),
-      'POST-PUBLICATION' => t('Post-Publication'),
-      'OTHER' => t('Other'),
+          'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
+          'Author\'s final version' => t('Author\'s final version'),
+          'Publisher\'s final version' => t('Publisher\'s final version'),
+          ' ' => t('Not Applicable'),
+#    '#options' => array(
+#      'PRE-PUBLICATION' => t('Pre-Publication'),
+#      'PUBLISHED' => t('Published'),
+#      'POST-PUBLICATION' => t('Post-Publication'),
+#      'OTHER' => t('Other'),
     ),
   );
-  $form['upload_document']['usage'] = array(
-    '#type' => 'radios',
-    '#title' => t('Use Permission'),
-    '#options' => array(
-      'publisher' => t('Contact Publisher (I do not hold copyright).'),
-      'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
-    ),
-  );
+#  $form['upload_document']['usage'] = array(
+#    '#type' => 'radios',
+#    '#title' => t('Use Permission'),
+#    '#options' => array(
+#      'publisher' => t('Contact Publisher (I do not hold copyright).'),
+#      'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
+#    ),
+#  );
   $form['upload_document']['certifying'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Certify'),
@@ -84,9 +89,9 @@ function islandora_scholar_pdf_upload_form_validate($form, $form_state) {
     if (empty($form_state['values']['version'])) {
       form_set_error('version', t('A document version must be selected!'));
     }
-    if (empty($form_state['values']['usage'])) {
-      form_set_error('usage', t('A usage permission must be selected!'));
-    }
+#    if (empty($form_state['values']['usage'])) {
+#      form_set_error('usage', t('A usage permission must be selected!'));
+#    }
     if (empty($form_state['values']['certifying']['certify'])) {
       form_set_error('certifying', t('You must certify that you have the right to upload this PDF!'));
     }
