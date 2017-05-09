@@ -128,14 +128,29 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
 
             }
           }
+          $nodes = $article->xpath("publication_date[@media_type='print']");
+          if ($nodes) {
+              $pubdate_year = (string) $nodes[0]->year[0];
+              $pubdate_month = (string) $nodes[0]->month[0];
+              $pubdate_day = (string) $nodes[0]->day[0];
+              
+          } else {
+            $nodes = $article->xpath("publication_date[@media_type='online']");
+            if ($nodes) {
+              $pubdate_year = (string) $nodes[0]->year[0];
+              $pubdate_month = (string) $nodes[0]->month[0];
+              $pubdate_day = (string) $nodes[0]->day[0];
+            } 
+          }
+          
           foreach ($article->children() as $name => $item) {
             switch ((string) $name) {
               case 'titles':
                 $title_info = $mods->addChild('titleInfo');
                 $title_info->addChild('title', (string) $item->title[0]);
-                if ($item->subtitle) {
-                  $title_info->addChild('subTitle', (string) $item->subtitle[0]);
-                }
+//                if ($item->subtitle) {
+//                  $title_info->addChild('subTitle', (string) $item->subtitle[0]);
+//                }
                 if ($item->original_language_title) {
                   // XXX: doesn't seem to actually add the original language
                   // title... creates the element, with attributes, but no
@@ -153,9 +168,11 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
                       $role = strtolower((string) $contributor['contributor_role']);
                       $sequence = (string) $contributor['sequence'];
                       $given_name = (string) $contributor->given_name;
+                      $given_name2 = explode(" ", (string) $contributor->given_name, 2);
                       $surname = (string) $contributor->surname;
                       $suffix = (string) $contributor->suffix;
                       $affiliation = (string) $contributor->affiliation;
+                      $orchid = str_replace('http://orcid.org/', '', (string) $contributor->ORCID);
 
                       $mods_name = $mods->addChild('name');
                       $mods_name->addAttribute('type', 'personal');
@@ -187,7 +204,11 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
                         $terms_of_address = $mods_name->addChild('namePart', $suffix);
                         $terms_of_address->addAttribute('type', 'termsOfAddress');
                       }
-
+                      
+                      if ($orchid) {
+                          $orchid1 = $mods_name->addChild('nameIdentifier', $orchid);
+                          $orchid1->addAttribute('type', 'ORCID');
+                      }
                       break;
 
                     case 'organization':
@@ -213,9 +234,9 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
                 break;
 
               case 'publication_date':
-                $pubdate_year = (string) $item[0]->year[0];
-                $pubdate_month = (string) $item[0]->month[0];
-                $pubdate_day = (string) $item[0]->day[0];
+//                $pubdate_year = (string) $item[0]->year[0];
+//                $pubdate_month = (string) $item[0]->month[0];
+//                $pubdate_day = (string) $item[0]->day[0];
                 break;
 
               case 'pages':
@@ -226,6 +247,7 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
 
               case 'publisher_item':
                 // @todo.
+                  $article_number = (string) $item->item_number;
                 break;
 
               case 'crossmark':
@@ -236,11 +258,20 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
                 foreach ($item->doi as $doi) {
                   $mods_identifier = $mods->addChild('identifier', (string) $doi);
                   $mods_identifier->addAttribute('type', 'doi');
+                  $mods_relatedItem2 = $mods->addChild('relatedItem');
+                  $mods_relatedItem2->addAttribute('type', 'isReferencedBy');
+                  $mods_identifier2 = $mods_relatedItem2->addChild('identifier');
+                  $mods_identifier2->addAttribute('type', 'uri');
+                  $mods_identifier2->{0} = 'http://dx.doi.org/' . (string) $doi;
+                  $abstract = islandora_doi_get_abstract((string) $doi);
+                  if ($abstract) {
+                      $mods_abstract = $mods->addchild('abstract', (string) $abstract);
+                  }
                 }
                 foreach ($item->resource as $resource) {
-                  $mods_identifier = $mods->addChild('identifier');
-                  $mods_identifier->{0} = (string) $resource;
-                  $mods_identifier->addAttribute('type', 'uri');
+//                  $mods_identifier = $mods->addChild('identifier');
+//                  $mods_identifier->{0} = (string) $resource;
+//                  $mods_identifier->addAttribute('type', 'uri');
                 }
                 break;
 
@@ -272,21 +303,26 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
             }
             $date_value .= "-" . $pubdate_day;
           }
-          $origin_info->addChild('dateIssued', $date_value);
+          $dateIssued = $origin_info->addChild('dateIssued', $date_value);
+          $dateIssued->addAttribute('encoding', 'w3cdtf');
+          $dateIssued->addAttribute('keyDate', 'yes');
         }
 
         if (!empty($volume_number) || !empty($issue_number) || !empty($other_pages) || !empty($last_page) || !empty($first_page) || !empty($pubdate_year) || !empty($pubdate_month) || !empty($pubdate_day)) {
-          $part = $mods->addChild('part');
+          $part = $relateditem->addChild('part');
 
           if (!empty($last_page) || !empty($first_page) || !empty($other_pages)) {
             $extent = $part->addChild('extent');
             $extent->addAttribute('unit', 'page');
-            if (!empty($other_pages)) {
-              $extent->addChild('list', $other_pages);
-            }
+//            if (!empty($other_pages)) {
+//              $extent->addChild('list', $other_pages);
+//            }
             if (!empty($last_page) || !empty($first_page)) {
               $extent->addChild('start', $first_page);
               $extent->addChild('end', $last_page);
+            }
+            if (!empty($last_page) && !empty($first_page)) {
+              $extent->addChild('list', ($first_page . '-' . $last_page));
             }
           }
 
@@ -299,6 +335,11 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
             $issue = $part->addChild('detail');
             $issue->addAttribute('type', 'issue');
             $issue->addChild('number', $issue_number);
+          }
+          if (!empty($article_number)) {
+            $article_num = $part->addChild('detail');
+            $article_num->addAttribute('type', 'citation/article');
+            $article_num->addChild('number', $article_number);
           }
           if (!empty($pubdate_year)) {
             $date_value = $pubdate_year;
@@ -314,7 +355,8 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
               }
               $date_value .= "-" . $pubdate_day;
             }
-            $part->addChild('date', $date_value);
+//  Removed following statement so data wasn't in part section.            
+//            $part->addChild('date', $date_value);
           }
 
         }
@@ -325,6 +367,62 @@ function islandora_doi_transform_to_mods(SimpleXMLElement $doi_xml) {
     }
   }
   return FALSE;
+}
+/**
+ *  * Get abstract form WOS for the given DOI.
+ *
+ * @param string $id
+ *   A DOI.
+ *
+ * @return String 
+ *   A string containing a abstract.
+ */
+ 
+function islandora_doi_get_abstract($id) {
+    $auth_url = "http://search.webofknowledge.com/esti/wokmws/ws/WOKMWSAuthenticate?wsdl";
+
+    $auth_client = @new SoapClient($auth_url, array('login' => "NCAR",
+        'password' => "OLCP2YXI"));
+//$auth_client = @new SoapClient($auth_url);
+    $auth_response = $auth_client->authenticate();
+    $search_url = "http://search.webofknowledge.com/esti/wokmws/ws/WokSearch?wsdl";
+    $search_client = @new SoapClient($search_url);
+    $search_client->__setCookie('SID', $auth_response->return);
+
+    $search_array = array(
+        'queryParameters' => array(
+            'databaseId' => 'WOS',
+            'userQuery' => 'DO=' . $id,
+            'editions' => array(
+                array('collection' => 'WOS', 'edition' => 'SCI')
+#      array('collection' => 'WOS', 'edition' => 'SCI')
+            ),
+            'queryLanguage' => 'en'
+        ),
+        'retrieveParameters' => array(
+            'count' => '5',
+            'fields' => array(
+                array('name' => 'Date', 'sort' => 'D')
+            ),
+            'firstRecord' => '1',
+            'viewField' => array('collectionName' => 'WOS', 'fieldName' => 'abstract')
+        )
+    );
+
+    try {
+        $search_response = $search_client->search($search_array);
+        if ($search_response->return->recordsFound > 0) {
+            $returnedxml = simplexml_load_string($search_response->return->records);
+            $abstractsxml = $returnedxml->REC->static_data->fullrecord_metadata->abstracts->abstract->abstract_text;
+            $abstract = (string) $abstractsxml->p;
+        } else {
+            $abstract = NULL;
+        }
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        $abstract = "Error";
+    }
+    return $abstract;
 }
 
 /**
