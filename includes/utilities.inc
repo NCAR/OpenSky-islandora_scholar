@@ -30,6 +30,9 @@ function islandora_scholar_get_view(AbstractObject $object) {
     'preview' => array(
       '#weight' => $i++,
     ),
+    'view_count' => array(
+      '#weight' => $i++,
+    ),          
     'pdf_download' => array(
       '#weight' => $i++,
     ),
@@ -63,6 +66,10 @@ function islandora_scholar_get_view(AbstractObject $object) {
         $default_search = $mods_xml->xpath("" . variable_get('islandora_scholar_google_scholar_default_search_xpath', "$object->label"));
         $search_term = (string) reset($default_search);
       }
+      
+
+      
+      
 
       $display['google_scholar_search'] = array(
         '#type' => 'item',
@@ -99,11 +106,23 @@ function islandora_scholar_get_view(AbstractObject $object) {
   if (isset($object['PDF']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PDF'])) {
     $display['pdf_download'] = array(
       '#type' => 'item',
-      '#title' => t('Download'),
-      '#markup' => l(t('PDF'), "islandora/object/$object->id/datastream/PDF/download/citation.pdf"),
+      '#markup' => t('Download ') . l(t('PDF'), "islandora/object/$object->id/datastream/PDF/download/citation.pdf"),
       '#weight' => $display['pdf_download']['#weight'],
     );
   }
+  
+  if (module_exists('islandora_usage_stats')):
+         module_load_include('inc', 'islandora_usage_stats', 'includes/db');
+     /* using the view_count method from db.inc */
+      $view_count = islandora_usage_stats_get_individual_object_view_count($object);
+      $ds_count = islandora_usage_stats_get_datastream_downloads_count($object);
+      $times_downloaded = 0;
+      if (array_key_exists('PDF',$ds_count)) $times_downloaded = $ds_count['PDF'];
+      $display['view_count']['#markup'] = t("<br/>Times Viewed on OpenSky: $view_count <br/> Times Downloaded on OpenSky: $times_downloaded <br/> <br/>");
+  endif; 
+
+  
+  
   return array('citation.tab' => $display);
 }
 
@@ -184,9 +203,11 @@ function islandora_scholar_get_metadata_display($object, $weight) {
     drupal_add_js('misc/collapse.js');
     $metadata = islandora_retrieve_metadata_markup($object);
     $description = islandora_retrieve_description_markup($object);
+    $doi_link = islandora_retrieve_doi_markup($object);
+
     $display = array(
       '#weight' => $weight,
-      '#markup' => $description . $metadata,
+      '#markup' => $doi_link . $description . $metadata,
     );
   }
   else {
@@ -202,3 +223,4 @@ function islandora_scholar_get_metadata_display($object, $weight) {
   }
   return $display;
 }
+
