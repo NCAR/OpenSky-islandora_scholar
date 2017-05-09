@@ -610,7 +610,7 @@ class csl_name extends csl_format {
         }
         elseif (isset($this->{'name-as-sort-order'})) {
           $naso = $this->{'name-as-sort-order'};
-          if ($naso == 'all' || ($naso == 'first' && $rank == 0)) {
+          if ($naso == 'all' || ($naso == 'first' && $rank == 0) && (isset($name->given))) {
             $text = $ndp . $name->family . $this->sort_separator . $given;
           }
         }
