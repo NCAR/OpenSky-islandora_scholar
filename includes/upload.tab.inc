@@ -51,7 +51,7 @@ function islandora_scholar_modify_form(array $form, array &$form_state, Abstract
     $usage = $mods_usages->item(0)->textContent;
   }
   $version = t('No version statement');
-  $mods_versions = $mods_xpath->query('//m:mods/m:physicalDescription[@authority="local"]');
+  $mods_versions = $mods_xpath->query('//m:mods/m:physicalDescription/m:note[@type="version"]');
   if ($mods_versions->length > 0) {
     $version = $mods_versions->item(0)->textContent;
   }
@@ -79,7 +79,7 @@ function islandora_scholar_modify_form(array $form, array &$form_state, Abstract
       '#name' => 'delete_document',
       '#type' => 'submit',
       '#value' => t('Delete Document/PDF'),
-    ),
+    ), 
   );
 }
 
@@ -164,22 +164,21 @@ function islandora_scholar_upload_form(array $form, array &$form_state, Abstract
         '#type' => 'radios',
         '#title' => t('Document Version'),
         '#options' => array(
-          'PRE-PUBLICATION' => t('Pre-Publication'),
-          'PUBLISHED' => t('Published'),
-          'POST-PUBLICATION' => t('Post-Publication'),
-          'OTHER' => t('Other'),
+          'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
+          'Author\'s final version' => t('Author\'s final version'),
+          'Publisher\'s final version' => t('Publisher\'s final version'),
         ),
         '#required' => TRUE,
       ),
-      'usage' => array(
-        '#type' => 'radios',
-        '#title' => t('Use Permission'),
-        '#options' => array(
-          'publisher' => t('Contact Publisher (I do not hold copyright).'),
-          'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
-        ),
-        '#required' => TRUE,
-      ),
+#      'usage' => array(
+#        '#type' => 'radios',
+#        '#title' => t('Use Permission'),
+#        '#options' => array(
+#          'publisher' => t('Contact Publisher (I do not hold copyright).'),
+#          'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
+#        ),
+#        '#required' => FALSE,
+#      ),
       'certifying' => array(
         '#type' => 'checkboxes',
         '#title' => t('Certify'),
@@ -209,7 +208,7 @@ function islandora_scholar_upload_form(array $form, array &$form_state, Abstract
  *   The version of the uploaded document either 'PRE-PUBLICATION',
  *  'PUBLISHED', 'POST-PUBLICATION', 'OTHER'.
  */
-function islandora_scholar_add_usage_and_version_elements_to_mods(AbstractObject $object, $usage, $version) {
+function islandora_scholar_add_usage_and_version_elements_to_mods(AbstractObject $object, $version) {
   $refuse_msg = t('Refusing to add usage and publication version statements alone');
   if (empty($object['MODS'])) {
     drupal_set_message(t('No MODS in object @pid. %refuse.', array('@pid' => $object->id, '%refuse' => $refuse_msg)), 'error');
@@ -222,10 +221,13 @@ function islandora_scholar_add_usage_and_version_elements_to_mods(AbstractObject
   $xpath->registerNamespace('mods', $namespace);
   // Remove all instances of mods:accessCondition and mods:physicalDescription
   // from every mods:mods element instance.
-  $access_condition_query = '//mods:accessCondition[@type="use and reproduction"]';
-  $physical_description_query = '//mods:physicalDescription[@authority="local"]';
-  $results = $xpath->query("{$access_condition_query} | {$physical_description_query}");
+#  $access_condition_query = '//mods:accessCondition[@type="use and reproduction"]';
+#  $physical_description_query = '//mods:physicalDescription/note[@authority="local"]';
+#  $physical_description_query = '//mods:physicalDescription[@authority="local"]';
+  $physical_description_query = '//mods:physicalDescription';
+  $results = $xpath->query("$physical_description_query");
   foreach ($results as $result) {
+    print_r ($result);
     $result->parentNode->removeChild($result);
   }
   // Regardless of the number of mods:mods elements in the document we only
@@ -237,14 +239,17 @@ function islandora_scholar_add_usage_and_version_elements_to_mods(AbstractObject
   }
   $mods_element = $results->item(0);
   // Add mods:accessCondition to the first mods:mods element.
-  $access_condition_element = $doc->createElementNS($namespace, 'accessCondition');
-  $access_condition_element->setAttribute('type', 'use and reproduction');
-  $access_condition_element->nodeValue = $usage;
-  $mods_element->appendChild($access_condition_element);
-  // Add mods:physicalDescription to the first mods:mods element.
+#  $access_condition_element = $doc->createElementNS($namespace, 'accessCondition');
+#  $access_condition_element->setAttribute('type', 'use and reproduction');
+#  $access_condition_element->nodeValue = $usage;
+#  $mods_element->appendChild($access_condition_element);
+#  // Add mods:physicalDescription to the first mods:mods element.
   $physical_description_element = $doc->createElementNS($namespace, 'physicalDescription');
-  $physical_description_element->setAttribute('authority', 'local');
-  $physical_description_element->nodeValue = $version;
+  $physical_description_note_element = $doc->createElementNS($namespace, 'note');
+  $physical_description_note_element->setAttribute('type', 'version');
+  # $physical_description_element->nodeValue = $version;
+  $physical_description_note_element->nodeValue = $version;
+  $physical_description_element->appendChild($physical_description_note_element);
   $mods_element->appendChild($physical_description_element);
   // Commit changes to datastream.
   $object['MODS']->setContentFromString($doc->saveXML());
@@ -276,7 +281,8 @@ function islandora_scholar_upload_form_submit(array $form, array &$form_state) {
 
     $object->ingestDatastream($datastream);
 
-    islandora_scholar_add_usage_and_version_elements_to_mods($object, $usage, $version);
+#    islandora_scholar_add_usage_and_version_elements_to_mods($object, $usage, $version);
+    islandora_scholar_add_usage_and_version_elements_to_mods($object, $version);
   }
   catch (Exception $e) {
     drupal_set_message(t('@message', array('@message' => check_plain($e->getMessage()))), 'error');
