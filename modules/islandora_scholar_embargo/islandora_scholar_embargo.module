@@ -343,7 +343,12 @@ function islandora_scholar_embargo_lift_embargo($param, $ds = NULL) {
     $rels = $embargo_ds->relationships->get(ISLANDORA_SCHOLAR_EMBARGO_RELS_URI, ISLANDORA_SCHOLAR_EMBARGO_EXPIRY_PRED);
     $embargo_ds->relationships->remove(ISLANDORA_SCHOLAR_EMBARGO_RELS_URI, ISLANDORA_SCHOLAR_EMBARGO_EXPIRY_PRED);
     $embargo_ds->relationships->remove(ISLANDORA_SCHOLAR_EMBARGO_RELS_URI, ISLANDORA_SCHOLAR_EMBARGO_NOTIFICATION_PRED);
+    // Add OBJ datastream to be unembargoed when PROXY_MP3 is un-embargoed.
+    if ($dsid == 'PROXY_MP3') {
+          $dsid = array('PROXY_MP3', 'OBJ');
+    }
     $xacml->datastreamRule->removeDsid($dsid);
+    
   }
 
   $xacml->writeBackToFedora();
@@ -442,6 +447,10 @@ function islandora_scholar_embargo_set_embargo($param, $dsid = NULL, $end = 'ind
         $embargo_ds->relationships->add(ISLANDORA_SCHOLAR_EMBARGO_RELS_URI, ISLANDORA_SCHOLAR_EMBARGO_NOTIFICATION_PRED, $notification, $type);
       }
       $xacml->datastreamRule->addDsid($dsid);
+      // If PROXY_MP3 datastream, also embargo OBJ datastream
+      if ($dsid == 'PROXY_MP3') {
+          $xacml->datastreamRule->addDsid('OBJ');
+      }
       $xacml_changed = TRUE;
       foreach ($users as $user) {
         $xacml->datastreamRule->addUser($user->name);
