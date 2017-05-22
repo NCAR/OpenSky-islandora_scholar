@@ -129,5 +129,9 @@ EOQ;
   foreach ($suspects as $pid => $dsid) {
     drush_log(dt('Clearing embargo on !pid.', array('!pid' => $pid)));
     islandora_scholar_embargo_lift_embargo($pid, $dsid);
+    // If an embargo on audio datastream, also remove the embargo on the OBJ datastream
+      if ($dsid == 'PROXY_MP3') {
+          islandora_scholar_embargo_lift_embargo($pid, 'OBJ');   
+      }
   }
 }
