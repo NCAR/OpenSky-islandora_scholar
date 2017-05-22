@@ -21,8 +21,13 @@
 function islandora_scholar_embargo_form(array $form, array &$form_state, $item) {
   $pid = $item->id;
   $options = array(
-    'object' => t('Object-level embargo'),
-    'PDF' => t('PDF'),
+    'object' => t('Object-level'),
+      /*
+    'PDF' => t('PDF Datastream'),
+    'OBJ' => t('OBJ Datastream'),   /*  Added for OBJ datastream by Ogg.  
+    'PROXY_MP3' => t('PROXY_MP3 Datastream'),   /*  Added for PROXY_MP3 datastream by Ogg.        
+      'Image' => t('Image'),
+      */
   );
   $embargo_results = islandora_scholar_embargo_get_embargoed($item);
 
@@ -72,7 +77,9 @@ function islandora_scholar_embargo_form(array $form, array &$form_state, $item) 
    * Another hook/configuration bit? */
   $used_options = array(
     'object' => '',
-    'PDF' => '',
+    'PDF' => '',    /* added PDF to original */
+    'OBJ' => '',
+    'PROXY_MP3' => '',
   );
   $options = array_intersect_key($options, $used_options);
 
@@ -275,6 +282,10 @@ function islandora_scholar_embargo_form_submit(array $form, array &$form_state) 
         $dsid = $type;
       }
       islandora_scholar_embargo_lift_embargo($pid, $dsid);
+      // If an embargo on audio datastream, also remove the embargo on the OBJ datastream
+      if ($dsid == 'PROXY_MP3') {
+          islandora_scholar_embargo_lift_embargo($pid, 'OBJ');   
+      }
       drupal_set_message(t('The embargo on @label (@pid) has been lifted!', array(
         '@label' => $object->label,
         '@pid' => $pid,
