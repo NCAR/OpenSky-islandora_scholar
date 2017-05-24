@@ -62,9 +62,9 @@ function islandora_scholar_menu() {
 }
 
 /**
- * Implements hook_islandora_xml_form_builder_forms().
+ * Implements hook_xml_form_builder_forms().
  */
-function islandora_scholar_islandora_xml_form_builder_forms() {
+function islandora_scholar_xml_form_builder_forms() {
   $module_path = drupal_get_path('module', 'islandora_scholar');
   return array(
     'Citation MODS form' => array(
@@ -73,13 +73,16 @@ function islandora_scholar_islandora_xml_form_builder_forms() {
     'Thesis MODS form' => array(
       'form_file' => "$module_path/xml/thesis_form.xml",
     ),
+    'Thesis MODS recovery form' => array(
+      'form_file' => "$module_path/xml/thesis_form_ISLANDORA1350.xml",
+    ),
   );
 }
 
 /**
- * Implements hook_islandora_content_model_forms_form_associations().
+ * Implements hook_xml_form_builder_form_associations().
  */
-function islandora_scholar_islandora_content_model_forms_form_associations() {
+function islandora_scholar_xml_form_builder_form_associations() {
   return array(
     'islandora_scholar_mods_form' => array(
       'content_model' => 'ir:citationCModel',
@@ -97,6 +100,15 @@ function islandora_scholar_islandora_content_model_forms_form_associations() {
       'transform' => 'mods_to_dc.xsl',
       'template' => FALSE,
     ),
+  );
+}
+
+/**
+ * Implements hook_islandora_xml_form_builder_get_transforms().
+ */
+function islandora_scholar_xml_form_builder_get_self_transforms() {
+  return array(
+    'cleanup_thesis_form.xslt' => drupal_get_path('module', 'islandora_scholar') . '/xsl/cleanup_thesis_form_ISLANDORA1350.xslt',
   );
 }
 
@@ -219,7 +231,7 @@ function islandora_scholar_romeo_access($object) {
  */
 function islandora_scholar_citation_access($object) {
   return variable_get('islandora_scholar_users_choose_display_csl', FALSE) &&
-    in_array('ir:citationCModel', $object->models) &&
+    array_intersect(array('ir:citationCModel', 'ir:thesisCModel'), $object->models) &&
     isset($object['MODS']) &&
     islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['MODS']);
 }

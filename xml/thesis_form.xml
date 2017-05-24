@@ -787,7 +787,7 @@
               <value>physicalDescription</value>
             </create>
             <read>
-              <path>mods:physicalDescription</path>
+              <path>mods:physicalDescription[not(@authority = 'local')]</path>
               <context>parent</context>
             </read>
             <update>NULL</update>
@@ -807,7 +807,7 @@
               <multiple>FALSE</multiple>
               <options>
                 <index key="">select a format</index>
-                <electronc>electronic</electronc>
+                <electronic>electronic</electronic>
                 <print>print</print>
                 <microfiche>microfiche</microfiche>
                 <microfilm>microfilm</microfilm>

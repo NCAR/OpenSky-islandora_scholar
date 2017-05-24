@@ -136,6 +136,15 @@ function islandora_scholar_upload_form(array $form, array &$form_state, Abstract
     return isset($form_state['values'][$name]) ? $form_state['values'][$name] : $default;
   };
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+
+  module_load_include('inc', 'islandora_scholar', 'includes/utilities');
+
+  // Pull document versions from the module settings if available.
+  $document_versions = get_document_versions();
+
+  // Pull use permissions from the module settings if available.
+  $use_permissions = get_use_permissions();
+
   return array(
     '#type' => 'form',
     'upload_document' => array(
@@ -163,21 +172,14 @@ function islandora_scholar_upload_form(array $form, array &$form_state, Abstract
       'version' => array(
         '#type' => 'radios',
         '#title' => t('Document Version'),
-        '#options' => array(
-          'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
-          'Author\'s final version' => t('Author\'s final version'),
-          'Publisher\'s final version' => t('Publisher\'s final version'),
-        ),
+        '#options' => $document_versions,
         '#required' => TRUE,
       ),
 #      'usage' => array(
 #        '#type' => 'radios',
 #        '#title' => t('Use Permission'),
-#        '#options' => array(
-#          'publisher' => t('Contact Publisher (I do not hold copyright).'),
-#          'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
-#        ),
-#        '#required' => FALSE,
+#        '#options' => $use_permissions,
+#        '#required' => TRUE,
 #      ),
       'certifying' => array(
         '#type' => 'checkboxes',

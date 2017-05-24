@@ -18,6 +18,13 @@
  */
 function islandora_scholar_pdf_upload_form(array $form, array &$form_state) {
   $upload_size = min((int) ini_get('post_max_size'), (int) ini_get('upload_max_filesize'));
+
+  // Pull document versions from the module settings if available.
+  $document_versions = get_document_versions();
+
+  // Pull use permissions from the module settings if available.
+  $use_permissions = get_use_permissions();
+
   $form['upload_pdf_checkbox'] = array(
     '#type' => 'checkbox',
     '#title' => t('Would you like to include a PDF document for this citation?'),
@@ -43,25 +50,12 @@ function islandora_scholar_pdf_upload_form(array $form, array &$form_state) {
   $form['upload_document']['version'] = array(
     '#type' => 'radios',
     '#title' => t('Document Version'),
-    '#options' => array(
-          'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
-          'Author\'s final version' => t('Author\'s final version'),
-          'Publisher\'s final version' => t('Publisher\'s final version'),
-          ' ' => t('Not Applicable'),
-#    '#options' => array(
-#      'PRE-PUBLICATION' => t('Pre-Publication'),
-#      'PUBLISHED' => t('Published'),
-#      'POST-PUBLICATION' => t('Post-Publication'),
-#      'OTHER' => t('Other'),
-    ),
+    '#options' => $document_versions,
   );
 #  $form['upload_document']['usage'] = array(
 #    '#type' => 'radios',
 #    '#title' => t('Use Permission'),
-#    '#options' => array(
-#      'publisher' => t('Contact Publisher (I do not hold copyright).'),
-#      'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
-#    ),
+#    '#options' => $use_permissions,
 #  );
   $form['upload_document']['certifying'] = array(
     '#type' => 'checkboxes',
@@ -112,10 +106,10 @@ function islandora_scholar_pdf_upload_form_submit(array $form, array &$form_stat
   if ($form_state['values']['upload_pdf_checkbox']) {
     $object = islandora_ingest_form_get_object($form_state);
     module_load_include('inc', 'islandora_scholar', 'includes/upload.tab');
-    $datastream = $object->constructDatastream('PDF', 'M');
-    $datastream->label = 'PDF Datastream';
-    $datastream->mimetype = 'application/pdf';
     $file = file_load($form_state['values']['file']);
+    $datastream = $object->constructDatastream('PDF', 'M');
+    $datastream->label = $file->filename;
+    $datastream->mimetype = 'application/pdf';
     $datastream->setContentFromFile($file->uri, FALSE);
     $object->ingestDatastream($datastream);
     islandora_scholar_add_usage_and_version_elements_to_mods($object, $form_state['values']['usage'], $form_state['values']['version']);

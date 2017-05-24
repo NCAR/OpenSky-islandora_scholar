@@ -96,10 +96,7 @@ function citation_exporter_batch_append_citations_to_text_file($set_id, $total, 
  */
 function _citation_exporter_batch_append_citations_to_text_file(array $pids, $filename, $style) {
   module_load_include('inc', 'citeproc', 'includes/converter');
-  module_load_include('php', 'CiteProc', 'lib/citeproc-php/CiteProc');
-  module_load_include('inc', 'csl', 'includes/csl');
-  $style = CSL::Get($style);
-  $citeproc = new citeproc($style->saveXML());
+  $citeproc = citeproc_get_citeproc_php_instance(citeproc_style($style));
   $file = fopen($filename, 'ab');
   foreach ($pids as $pid) {
     $object = islandora_object_load($pid);
@@ -108,6 +105,10 @@ function _citation_exporter_batch_append_citations_to_text_file(array $pids, $fi
       if (!empty($mods)) {
         $json = _citeproc_array_to_object(convert_mods_to_citeproc_jsons($mods));
         $text = $citeproc->render($json, 'bibliography');
+        // The text string can be altered by other modules before it is added to
+        // the export file. NOTE: This will alter will trigger during both RTF
+        // and PDF export.
+        drupal_alter(CITATION_EXPORTER_MODIFY_EXPORTING_CITATION_TEXT_HOOK, $text, $object);
         if ($file) {
           // I know the <br/> look out of place but its cause this is an
           // intermediate document and the rtf class will replace them with

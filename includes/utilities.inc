@@ -43,12 +43,10 @@ function islandora_scholar_get_view(AbstractObject $object) {
     ),
   );
   if (isset($object['MODS']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['MODS'])) {
-    if (variable_get('islandora_scholar_users_choose_display_csl', FALSE)) {
-      module_load_include('inc', 'islandora_scholar', 'includes/csl_select.form');
-      $display['citation_select'] = drupal_get_form('islandora_scholar_citation_select_form', $object->id);
-    }
+    module_load_include('inc', 'islandora_scholar', 'includes/csl_select.form');
+    $display['citation_select'] = drupal_get_form('islandora_scholar_citation_select_form', $object->id);
     $display['citation']['#markup'] = citeproc_bibliography_from_mods(
-        citeproc_default_style(), $object['MODS']->content
+      citeproc_default_style(), $object['MODS']->content
     );
 
     if (variable_get('islandora_scholar_google_scholar_search_enabled', FALSE)) {
@@ -56,15 +54,19 @@ function islandora_scholar_get_view(AbstractObject $object) {
       $mods_xml = simplexml_load_string($object['MODS']->content);
       $mods_xml->registerXPathNamespace('mods', 'http://www.loc.gov/mods/v3');
 
-      // Search for doi for search term.  If exists use it instead of default.
-      $primary_search = $mods_xml->xpath("" . variable_get('islandora_scholar_google_scholar_primary_search_xpath', NULL));
+      // Search for primary search term (usually DOI).
+      $search_term = NULL;
+      $primary_search = $mods_xml->xpath("" . variable_get('islandora_scholar_google_scholar_primary_search_xpath', '//mods:identifier[@type="doi"]'));
       if ($primary_search) {
         $search_term = (string) reset($primary_search);
       }
-      else {
-        // Default search term is the title of the citation.
-        $default_search = $mods_xml->xpath("" . variable_get('islandora_scholar_google_scholar_default_search_xpath', "$object->label"));
+      if (!$search_term) {
+        // Search for default search term (usually title).
+        $default_search = $mods_xml->xpath("" . variable_get('islandora_scholar_google_scholar_default_search_xpath', '//mods:mods[1]/mods:titleInfo/mods:title'));
         $search_term = (string) reset($default_search);
+      }
+      if (!$search_term) {
+        $search_term = $object->label;
       }
       
 
@@ -82,15 +84,24 @@ function islandora_scholar_get_view(AbstractObject $object) {
     $display['citation']['#markup'] = t('Unable to load MODS.');
   }
 
-  if (isset($object['PREVIEW']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PREVIEW'])) {
+  module_load_include('inc', 'islandora', 'includes/solution_packs');
+  $viewer = islandora_get_viewer(array(), 'islandora_scholar_viewers', $object);
+
+  if ($viewer) {
+    $display['preview'] = array(
+      '#markup' => $viewer,
+      '#weight' => $display['preview']['#weight'],
+    );
+  }
+  elseif (isset($object['PREVIEW']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PREVIEW'])) {
     $image = theme('image', array(
-      'path' => "islandora/object/$object->id/datastream/PREVIEW/view",
-    ));
+        'path' => "islandora/object/$object->id/datastream/PREVIEW/view",
+      ));
     if (isset($object['PDF']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PDF'])) {
       $display['preview'] = array(
         '#markup' => l($image, "islandora/object/$object->id/datastream/PDF/view", array(
-          'html' => TRUE,
-        )),
+            'html' => TRUE,
+          )),
         '#weight' => $display['preview']['#weight'],
       );
     }
@@ -224,3 +235,42 @@ function islandora_scholar_get_metadata_display($object, $weight) {
   return $display;
 }
 
+/**
+ * Get a list of document versions for PDF upload.
+ *
+ * @return array
+ *   document versions to choose from during document ingest
+ */
+function get_document_versions() {
+  if (variable_get('islandora_scholar_specify_document_versions', FALSE)) {
+    $document_version_names = array_map('trim', explode("\n", variable_get('islandora_scholar_document_versions', "Author's Original\nSubmitted Manuscript Under Review\nAccepted Manuscript\nProof\nVersion of Record\nCorrected Version of Record\nEnhanced Version of Record")));
+    return array_combine($document_version_names, $document_version_names);
+  }
+  else {
+    return array(
+      'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
+      'Author\'s final version' => t('Author\'s final version'),
+      'Publisher\'s final version' => t('Publisher\'s final version'),
+      ' ' => t('Not Applicable'),        
+    );
+  }
+}
+
+/**
+ * Get a list of use permissions for PDF upload.
+ *
+ * @return array
+ *   use permissions to choose from during document ingest
+ */
+function get_use_permissions() {
+  if (variable_get('islandora_scholar_specify_use_permissions', FALSE)) {
+    $use_permission_names = array_map('trim', explode("\n", variable_get('islandora_scholar_use_permissions', "Publisher\nAuthor")));
+    return array_combine($use_permission_names, $use_permission_names);
+  }
+  else {
+    return array(
+      'publisher' => t('Contact Publisher (I do not hold copyright).'),
+      'author' => t('Contact Author (I hold the copyright and wish to retain all rights).'),
+    );
+  }
+}

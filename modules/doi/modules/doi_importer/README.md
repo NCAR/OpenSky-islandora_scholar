@@ -4,6 +4,15 @@
 
 Importer plugin for Digital Object Identifiers, to create citation objects.
 
+## Requirements
+
+This module requires the following modules/libraries:
+
+* [Islandora](https://github.com/islandora/islandora)
+* [Islandora Importer](https://github.com/islandora/islandora_importer)
+* [Islandora Scholar](https://github.com/islandora/islandora_scholar)
+* [Islandora DOI](https://github.com/Islandora/islandora_scholar/tree/7.x/modules/doi)
+
 ## Installation
 
 Install as usual, see [this](https://drupal.org/documentation/install/modules-themes/modules-7) for further information.
@@ -23,11 +32,12 @@ Having problems or solved a problem? Check out the Islandora google groups for a
 
 Current maintainers:
 
-* [discoverygarden](https://github.com/discoverygarden)
+* [Bryan Brown](https://github.com/bryjbrown)
+* [Don Richards](https://github.com/DonRichards)
 
 ## Development
 
-If you would like to contribute to this module, please check out our helpful [Documentation for Developers](https://github.com/Islandora/islandora/wiki#wiki-documentation-for-developers) info, as well as our [Developers](http://islandora.ca/developers) section on the Islandora.ca site.
+If you would like to contribute to this module, please check out [CONTRIBUTING.md](CONTRIBUTING.md). In addition, we have helpful [Documentation for Developers](https://github.com/Islandora/islandora/wiki#wiki-documentation-for-developers) info, as well as our [Developers](http://islandora.ca/developers) section on the [Islandora.ca](http://islandora.ca) site.
 
 ## License
 

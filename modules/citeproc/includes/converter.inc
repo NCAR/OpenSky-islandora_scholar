@@ -665,6 +665,7 @@ function convert_mods_to_citeproc_json_names(SimpleXMLElement $mods) {
     $names = $mods->xpath($path);
     if (!empty($names)) {
       foreach ($names as $name) {
+
         add_mods_namespace($name);
         $role = convert_mods_to_citeproc_json_name_role($name, $valid_roles, $default_role);
         if ($role !== FALSE) {
@@ -799,14 +800,21 @@ function convert_mods_to_citeproc_json_name_corporate(SimpleXMLElement $name) {
  */
 function convert_mods_to_citeproc_json_name_role(SimpleXMLElement $name, array $valid_roles, $default_role) {
   module_load_include('inc', 'citeproc', 'includes/marcrelator_conversion');
-  if (isset($name->role)) {
-    $role = strtolower((string) $name->role->roleTerm);
-    if (isset($name->role->roleTerm)) {
-      $role_authority = (string) $name->role->roleTerm->attributes()->authority;
-      $role_type = (string) $name->role->roleTerm->attributes()->type;
-      if ($role_authority == 'marcrelator' && $role_type == 'code') {
-        $role = marcrelator_code_to_term($role);
-      }
+  $role_term = $name->xpath("mods:role/mods:roleTerm");
+  if (isset($role_term[0])) {
+    $role = strtolower((string) $role_term[0]);
+    $role_term = $role_term[0];
+  }
+  else {
+    $role = NULL;
+  }
+
+  if ($role) {
+    $role_authority = (string) $role_term->attributes()->authority;
+    $role_type = (string) $role_term->attributes()->type;
+
+    if ($role_authority == 'marcrelator' && $role_type == 'code') {
+      $role = marcrelator_code_to_term($role);
     }
     return array_key_exists($role, $valid_roles) ? $valid_roles[$role] : FALSE;
   }
@@ -846,6 +854,9 @@ function convert_mods_to_citeproc_json_dates(SimpleXMLElement $mods) {
   if (!empty($season) && isset($output['issued']['date-parts'][0]) && count($output['issued']['date-parts'][0]) == 1) {
     $seasons = array('', 'Spring', 'Summer', 'Fall', 'Winter');
     $output['issued']['season'] = (string) array_search($season, $seasons);
+  }
+  if (empty($output)) {
+    $output['issued'] = array('string-literal' => '');
   }
   return $output;
 }
