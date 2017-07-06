@@ -145,289 +145,6 @@ function islandora_doi_transform_to_mods($doi_xml) {
             }
             break;
         }
-        foreach ($journal->journal_issue as $issue) {
-          foreach ($issue->children() as $name => $item) {
-            switch ((string) $name) {
-              case 'contributors':
-                break;
-
-              case 'publication_date':
-                $pubdate_year = (string) $item[0]->year[0];
-                $pubdate_month = (string) $item[0]->month[0];
-                $pubdate_day = (string) $item[0]->day[0];
-                break;
-
-              case 'journal_volume':
-                $volume_number = (string) $item[0]->volume[0];
-                break;
-
-              case 'issue':
-                $issue_number = (string) $item[0];
-                break;
-
-              case 'special_numbering':
-                break;
-
-              case 'doi_data':
-                break;
-
-            }
-          }
-        }
-        foreach ($journal->journal_article as $article) {
-          foreach ($article->attributes() as $name => $item) {
-            switch ((string) $name) {
-              case 'publication_type':
-                // Options: full_text, abstract_only, bibliographic_record
-                // doesn't seem to matter here.
-                break;
-
-              case 'language':
-                $language = $mods->addChild('language');
-                $languageterm = $language->addChild('languageTerm', (string) $item[0]);
-                if (strlen((string) $item[0]) == 2) {
-                  $languageterm->addAttribute('type', 'code');
-                  $languageterm->addAttribute('authority', 'rfc4646');
-                }
-                break;
-
-            }
-          }
-          $nodes = $article->xpath("publication_date[@media_type='print']");
-          if ($nodes) {
-              $pubdate_year = (string) $nodes[0]->year[0];
-              $pubdate_month = (string) $nodes[0]->month[0];
-              $pubdate_day = (string) $nodes[0]->day[0];
-              
-          } else {
-            $nodes = $article->xpath("publication_date[@media_type='online']");
-            if ($nodes) {
-              $pubdate_year = (string) $nodes[0]->year[0];
-              $pubdate_month = (string) $nodes[0]->month[0];
-              $pubdate_day = (string) $nodes[0]->day[0];
-            } 
-          }
-          
-          foreach ($article->children() as $name => $item) {
-            switch ((string) $name) {
-              case 'titles':
-                $title_info = $mods->addChild('titleInfo');
-                $title_info->addChild('title', (string) $item->title[0]);
-//                if ($item->subtitle) {
-//                  $title_info->addChild('subTitle', (string) $item->subtitle[0]);
-//                }
-                if ($item->original_language_title) {
-                  // XXX: doesn't seem to actually add the original language
-                  // title... creates the element, with attributes, but no
-                  // content?
-                  $title_info_translated = $mods->addChild('titleInfo');
-                  $title_info_translated->addAttribute('type', 'translated');
-                  $title_info_translated->addAttribute('lang', (string) $item->original_language_title['language']);
-                }
-                break;
-
-              case 'contributors':
-                foreach ($item->children() as $type => $contributor) {
-                  switch ((string) $type) {
-                    case 'person_name':
-                      $role = strtolower((string) $contributor['contributor_role']);
-                      $sequence = (string) $contributor['sequence'];
-                      $given_name = (string) $contributor->given_name;
-                      $given_name2 = explode(" ", (string) $contributor->given_name, 2);
-                      $surname = (string) $contributor->surname;
-                      $suffix = (string) $contributor->suffix;
-                      $affiliation = (string) $contributor->affiliation;
-                      $orchid = str_replace('http://orcid.org/', '', (string) $contributor->ORCID);
-
-                      $mods_name = $mods->addChild('name');
-                      $mods_name->addAttribute('type', 'personal');
-
-                      $given_name_part = $mods_name->addChild('namePart', $given_name);
-                      $given_name_part->addAttribute('type', 'given');
-                      $surname_part = $mods_name->addChild('namePart', $surname);
-                      $surname_part->addAttribute('type', 'family');
-
-                      if ($sequence == 'first') {
-                        $mods_name->addAttribute('usage', 'primary');
-                      }
-
-                      if ($role) {
-                        $name_role = $mods_name->addChild('role');
-                        $name_role->addChild('roleTerm', $role);
-                        $roles = array('author', 'editor', 'translator');
-                        if (in_array($role, $roles)) {
-                          $name_role->roleTerm->addAttribute('authority', 'marcrelator');
-                          $name_role->roleTerm->addAttribute('type', 'text');
-                        }
-                      }
-
-                      if ($affiliation) {
-                        $mods_name->addChild('affiliation', $affiliation);
-                      }
-
-                      if ($suffix) {
-                        $terms_of_address = $mods_name->addChild('namePart', $suffix);
-                        $terms_of_address->addAttribute('type', 'termsOfAddress');
-                      }
-                      
-                      if ($orchid) {
-                          $orchid1 = $mods_name->addChild('nameIdentifier', $orchid);
-                          $orchid1->addAttribute('type', 'ORCID');
-                      }
-                      break;
-
-                    case 'organization':
-                      $role = strtolower((string) $contributor['contributor_role']);
-                      $sequence = (string) $contributor['sequence'];
-                      $mods_name = $mods->addChild('name');
-                      $mods_name->addAttribute('type', 'corporate');
-                      $mods_name->addChild('namePart', (string) $contributor);
-                      break;
-
-                  }
-                }
-                break;
-
-              // Genre element was not getting populated and it is needed
-              // for proper CSL display. If we start pulling anything other
-              // than journal articles using DOIs, then this will need to
-              // be revisited. Journal article will work when piped through
-              // CSL converter.
-              case 'genre':
-                $genre = 'journal article';
-                $mods_genre = $mods->addChild('genre', $genre);
-                break;
-
-              case 'publication_date':
-//                $pubdate_year = (string) $item[0]->year[0];
-//                $pubdate_month = (string) $item[0]->month[0];
-//                $pubdate_day = (string) $item[0]->day[0];
-                break;
-
-              case 'pages':
-                $first_page = (string) $item[0]->first_page[0];
-                $last_page = (string) $item[0]->last_page[0];
-                $other_pages = (string) $item[0]->other_pages[0];
-                break;
-
-              case 'publisher_item':
-                // @todo.
-                  $article_number = (string) $item->item_number;
-                break;
-
-              case 'crossmark':
-                // @todo.
-                break;
-
-              case 'doi_data':
-                foreach ($item->doi as $doi) {
-                  $mods_identifier = $mods->addChild('identifier', (string) $doi);
-                  $mods_identifier->addAttribute('type', 'doi');
-                  $mods_relatedItem2 = $mods->addChild('relatedItem');
-                  $mods_relatedItem2->addAttribute('type', 'isReferencedBy');
-                  $mods_identifier2 = $mods_relatedItem2->addChild('identifier');
-                  $mods_identifier2->addAttribute('type', 'uri');
-                  $mods_identifier2->{0} = 'http://dx.doi.org/' . (string) $doi;
-                  $abstract = islandora_doi_get_abstract((string) $doi);
-                  if ($abstract) {
-                      $mods_abstract = $mods->addchild('abstract', (string) $abstract);
-                  }
-                }
-                foreach ($item->resource as $resource) {
-//                  $mods_identifier = $mods->addChild('identifier');
-//                  $mods_identifier->{0} = (string) $resource;
-//                  $mods_identifier->addAttribute('type', 'uri');
-                }
-                break;
-
-              case 'citation_list':
-                // @todo.
-                break;
-
-              case 'component_list':
-                // @todo.
-                break;
-            }
-          }
-        }
-
-        // We should populated the dateIssued element otherwise CSL does
-        // not display a date.
-        $origin_info = $mods->addChild('originInfo');
-        if (!empty($pubdate_year)) {
-          $date_value = $pubdate_year;
-          if (!empty($pubdate_month)) {
-            if (strlen($pubdate_month) == 1) {
-              $pubdate_month = "0" . $pubdate_month;
-            }
-            $date_value .= "-" . $pubdate_month;
-          }
-          if (!empty($pubdate_day)) {
-            if (strlen($pubdate_day) == 1) {
-              $pubdate_day = "0" . $pubdate_day;
-            }
-            $date_value .= "-" . $pubdate_day;
-          }
-          $dateIssued = $origin_info->addChild('dateIssued', $date_value);
-          $dateIssued->addAttribute('encoding', 'w3cdtf');
-          $dateIssued->addAttribute('keyDate', 'yes');
-        }
-
-        if (!empty($volume_number) || !empty($issue_number) || !empty($other_pages) || !empty($last_page) || !empty($first_page) || !empty($pubdate_year) || !empty($pubdate_month) || !empty($pubdate_day)) {
-          $part = $relateditem->addChild('part');
-
-          if (!empty($last_page) || !empty($first_page) || !empty($other_pages)) {
-            $extent = $part->addChild('extent');
-            $extent->addAttribute('unit', 'page');
-//            if (!empty($other_pages)) {
-//              $extent->addChild('list', $other_pages);
-//            }
-            if (!empty($last_page) || !empty($first_page)) {
-              $extent->addChild('start', $first_page);
-              $extent->addChild('end', $last_page);
-            }
-            if (!empty($last_page) && !empty($first_page)) {
-              $extent->addChild('list', ($first_page . '-' . $last_page));
-            }
-          }
-
-          if (!empty($volume_number)) {
-            $volume = $part->addChild('detail');
-            $volume->addAttribute('type', 'volume');
-            $volume->addChild('number', $volume_number);
-          }
-          if (!empty($issue_number)) {
-            $issue = $part->addChild('detail');
-            $issue->addAttribute('type', 'issue');
-            $issue->addChild('number', $issue_number);
-          }
-          if (!empty($article_number)) {
-            $article_num = $part->addChild('detail');
-            $article_num->addAttribute('type', 'citation/article');
-            $article_num->addChild('number', $article_number);
-          }
-          if (!empty($pubdate_year)) {
-            $date_value = $pubdate_year;
-            if (!empty($pubdate_month)) {
-              if (strlen($pubdate_month) == 1) {
-                $pubdate_month = "0" . $pubdate_month;
-              }
-              $date_value .= "-" . $pubdate_month;
-            }
-            if (!empty($pubdate_day)) {
-              if (strlen($pubdate_day) == 1) {
-                $pubdate_day = "0" . $pubdate_day;
-              }
-              $date_value .= "-" . $pubdate_day;
-            }
-//  Removed following statement so data wasn't in part section.            
-//            $part->addChild('date', $date_value);
-          }
-
-        }
-
-        // Return after first instance.
-        return $mods;
       }
     }
     foreach ($journal->getElementsByTagName('journal_issue') as $issue) {
@@ -514,12 +231,13 @@ function islandora_doi_transform_to_mods($doi_xml) {
                     break;
 
                   case 'subtitle':
-                    $article_subtitle = $mods->createElement('subTitle');
-                    if (!is_null($grandchild->firstChild)) {
-                      $article_subtitle_text = $mods->importNode($grandchild->firstChild, TRUE);
-                      $article_subtitle->appendChild($article_subtitle_text);
-                    }
-                    $titleinfo->appendChild($article_subtitle);
+//  NCAR Library doesn't want subtitles for articles.                      
+//                    $article_subtitle = $mods->createElement('subTitle');
+//                    if (!is_null($grandchild->firstChild)) {
+//                      $article_subtitle_text = $mods->importNode($grandchild->firstChild, TRUE);
+//                      $article_subtitle->appendChild($article_subtitle_text);
+//                    }
+//                    $titleinfo->appendChild($article_subtitle);
                     break;
 
                   case 'original_language_title':
@@ -617,6 +335,18 @@ function islandora_doi_transform_to_mods($doi_xml) {
                         $affiliation->appendChild($affiliation_text);
                       }
                       break;
+                    case 'ORCID':
+                        $orcid = $mods->createElement('nameIdentifier');
+                        $name->appendChild($orcid);
+                        if (!is_null($person_part->firstChild)) {
+                            $orcid_text = $mods->importNode($person_part->firstChild);
+                            $orcid_text->nodeValue = str_replace('http://orcid.org/', '', (string) $orcid_text->nodeValue);
+                            $orcid->appendChild($orcid_text);
+                        }
+                        $orcid_attribute = $mods->createAttribute('type');
+                        $orcid_attribute->value = 'ORCID';
+                        $orcid->appendChild($orcid_attribute);
+                      break;
                   }
                 }
 
@@ -681,18 +411,21 @@ function islandora_doi_transform_to_mods($doi_xml) {
                     case 'first_page':
                       if (!is_null($page_part->firstChild)) {
                         $first_page = $mods->importNode($page_part->firstChild);
+                        $first_page->nodeValue = str_replace(',', '', $first_page->nodeValue);
                       }
                       break;
 
                     case 'last_page':
                       if (!is_null($page_part->firstChild)) {
                         $last_page = $mods->importNode($page_part->firstChild);
+                        $last_page->nodeValue = str_replace(',', '', $last_page->nodeValue);
                       }
                       break;
 
                     case 'other_pages':
                       if (!is_null($page_part->firstChild)) {
                         $other_pages = $mods->importNode($page_part->firstChild);
+                        $other_pages->nodeValue = str_replace(',', '', $other_pages->nodeValue);
                       }
                       break;
                   }
@@ -702,7 +435,16 @@ function islandora_doi_transform_to_mods($doi_xml) {
 
             case 'publisher_item':
               // @todo
-              break;
+                if ($child->hasChildNodes()) {
+                    foreach ($child->childNodes as $id) {
+                            switch ($id->nodeName) {
+                                case 'item_number':
+                                    $article_number = $mods->importNode($id->firstChild);
+                                break;
+                        }
+                    }
+                }
+             break;
 
             case 'crossmark':
               // @todo
@@ -721,7 +463,15 @@ function islandora_doi_transform_to_mods($doi_xml) {
                         $doi->appendChild($doi_attribute);
                         $doi_text = $mods->importNode($identifier->firstChild);
                         $doi->appendChild($doi_text);
-                      }
+                        $abstract_text = islandora_doi_get_abstract($doi->nodeValue);
+                        if ($abstract_text) {
+                            $abstract = $mods->createElement('abstract');
+                            $abstract->nodeValue = $abstract_text;
+                            $mods->firstChild->appendChild($abstract);
+                            
+                            
+                        }
+                       }
                       break;
 
                     case 'resource':
@@ -747,6 +497,9 @@ function islandora_doi_transform_to_mods($doi_xml) {
             case 'component_list':
               // @todo
               break;
+            case 'program';
+              // @todo
+              break;          
           }
         }
       }
@@ -770,14 +523,20 @@ function islandora_doi_transform_to_mods($doi_xml) {
         $date_value .= "-" . $pubdate_day;
       }
       $dateissued = $mods->createElement('dateIssued');
+      $dateissued_attribute = $mods->createAttribute('encoding');
+      $dateissued_attribute->value = 'w3cdtf';
+      $dateissued->appendChild($dateissued_attribute);
+      $dateissued_attribute = $mods->createAttribute('keyDate');
+      $dateissued_attribute->value = 'yes';
+      $dateissued->appendChild($dateissued_attribute);
       $origininfo->appendChild($dateissued);
       $dateissued->nodeValue = $date_value;
     }
 
     // Add the page, volume, and issue data if it was read above.
-    if (!empty($volume_number) || !empty($issue_number) || !empty($other_pages) || !empty($last_page) || !empty($first_page) || !empty($pubdate_year) || !empty($pubdate_month) || !empty($pubdate_day)) {
+    if (!empty($volume_number) || !empty($issue_number) || !empty($other_pages) || !empty($last_page) || !empty($first_page) || !empty($pubdate_year) || !empty($pubdate_month) || !empty($pubdate_day) || !empty($article_number)) {
       $part = $mods->createElement('part');
-      $mods->firstChild->appendChild($part);
+      $relateditem->appendChild($part);
 
       if (!empty($last_page) || !empty($first_page) || !empty($other_pages)) {
         $extent = $mods->createElement('extent');
@@ -786,10 +545,16 @@ function islandora_doi_transform_to_mods($doi_xml) {
         $extent_attribute->value = 'page';
         $extent->appendChild($extent_attribute);
 
-        if (!empty($other_pages)) {
-          $list = $mods->createElement('list');
-          $list->appendChild($other_pages);
-          $extent->appendChild($list);
+//        if (!empty($other_pages)) {
+//          $list = $mods->createElement('list');
+//          $list->appendChild($other_pages);
+//          $extent->appendChild($list);
+//        }
+        if (!empty($last_page) && !empty($first_page)) {
+            $testvalue = $first_page->nodeValue . '-' . $last_page->nodeValue;
+            $list = $mods->createElement('list');
+            $list->nodeValue = $first_page->nodeValue . '-' . $last_page->nodeValue;
+            $extent->appendChild($list);
         }
         if (!empty($first_page)) {
           $start = $mods->createElement('start');
@@ -823,12 +588,23 @@ function islandora_doi_transform_to_mods($doi_xml) {
         $issue->appendChild($number);
         $number->appendChild($issue_number);
       }
-
-      if (!empty($date_value)) {
-        $date = $mods->createElement('date');
-        $date->nodeValue = $date_value;
-        $part->appendChild($date);
+      if (!empty($article_number)) {
+        $article_num = $mods->createElement('detail');
+        $part->appendChild($article_num);
+        $article_num_attribute = $mods->createAttribute('type');
+        $article_num_attribute->value = 'citation/article';
+        $article_num->appendChild($article_num_attribute);
+        $number = $mods->createElement('number');
+        $article_num->appendChild($number);
+        $number->appendChild($article_number);
       }
+
+//  NCAR Library doesn't want date in related items.      
+//      if (!empty($date_value)) {
+//        $date = $mods->createElement('date');
+//        $date->nodeValue = $date_value;
+//        $part->appendChild($date);
+//      }
     }
     // Return after first instance.
     return $mods;
@@ -836,6 +612,8 @@ function islandora_doi_transform_to_mods($doi_xml) {
 
   return FALSE;
 }
+
+
 /**
  *  * Get abstract form WOS for the given DOI.
  *
@@ -845,7 +623,7 @@ function islandora_doi_transform_to_mods($doi_xml) {
  * @return String 
  *   A string containing a abstract.
  */
- 
+
 function islandora_doi_get_abstract($id) {
     $auth_url = "http://search.webofknowledge.com/esti/wokmws/ws/WOKMWSAuthenticate?wsdl";
 
@@ -856,6 +634,7 @@ function islandora_doi_get_abstract($id) {
     $search_url = "http://search.webofknowledge.com/esti/wokmws/ws/WokSearch?wsdl";
     $search_client = @new SoapClient($search_url);
     $search_client->__setCookie('SID', $auth_response->return);
+    $id = '"' . $id . '"';
 
     $search_array = array(
         'queryParameters' => array(
@@ -892,6 +671,8 @@ function islandora_doi_get_abstract($id) {
     }
     return $abstract;
 }
+
+
 
 /**
  * Get MODS for the given DOI.
