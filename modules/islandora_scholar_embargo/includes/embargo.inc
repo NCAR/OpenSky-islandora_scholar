@@ -325,9 +325,9 @@ function islandora_scholar_embargo_form_submit(array $form, array &$form_state) 
       if ($type !== 'Object') {
         $dsids[] = $type;
       }
-      islandora_scholar_embargo_lift_embargo($pid, $dsid);
+      islandora_scholar_embargo_lift_embargo($pid, $dsids);
       // If an embargo on audio datastream, also remove the embargo on the OBJ datastream
-      if ($dsid == 'PROXY_MP3') {
+      if ($dsids == 'PROXY_MP3') {
           islandora_scholar_embargo_lift_embargo($pid, 'OBJ');   
       }
       drupal_set_message(t('The embargo on @label (@pid) has been lifted!', array(
@@ -389,12 +389,13 @@ function islandora_scholar_embargo_form_submit(array $form, array &$form_state) 
         $dsids = NULL;
       }
       else {
-        $dsid_options = array_filter($form_state['values']['ds_options']);
-        $other_options = array();
-        if ($form_state['values']['ds_options_other']) {
-          $other_options = drupal_map_assoc(array_values(array_filter(preg_split('/[,|\s]/', trim($form_state['values']['ds_other'])))));
-        }
-        $dsids = array_unique(array_merge($dsid_options, $other_options));
+//        $dsid_options = array_filter($form_state['values']['ds_options']);
+//        $other_options = array();
+//        if ($form_state['values']['ds_options_other']) {
+//          $other_options = drupal_map_assoc(array_values(array_filter(preg_split('/[,|\s]/', trim($form_state['values']['ds_other'])))));
+//        }
+//        $dsids = array_unique(array_merge($dsid_options, $other_options));
+          $dsids = (array)$form_state['values']['dsid'];
       }
     }
     // Currently we just overwrite what's already in place. In the future, for
