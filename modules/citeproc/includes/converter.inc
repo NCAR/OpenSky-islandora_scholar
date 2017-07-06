@@ -426,9 +426,9 @@ function convert_mods_to_citeproc_json_number(SimpleXMLElement $mods) {
 function convert_mods_to_citeproc_json_page(SimpleXMLElement $mods) {
     $output = NULL;
     $article_number = convert_mods_to_citeproc_json_query($mods, '//mods:mods[1]/mods:relatedItem[@type="host"]/mods:part/mods:detail[@type="citation/article"]/mods:number');
-    if (isset($article_number)) {
-        $output = $article_number;
-    } else {
+//    if (isset($article_number)) {
+//        $output = $article_number;
+//    } else {
         $pages = $mods->xpath("//mods:mods[1]/mods:relatedItem/mods:part/mods:extent[@unit='page']");
         // Note: "pages" is correct, but Zotero uses "page".
         if (empty($pages)) {
@@ -442,14 +442,15 @@ function convert_mods_to_citeproc_json_page(SimpleXMLElement $mods) {
                 if (!empty($pages[0]->end)) {
                     $output .= "-" . $pages[0]->end;
                 }
-            } elseif (!empty($pages[0]->total)) {
-                $output = (string) $pages[0]->total . " pp";
-            }
+                } elseif (isset($article_number)) {
+                    $output = $article_number;
+                    } elseif (!empty($pages[0]->total)) {
+                        $output = (string) $pages[0]->total . " pp";
+                        }
         }
-    }
+//    }
     return $output;
 }
-
 /**
  * Gets the type property for the Citation.
  *
