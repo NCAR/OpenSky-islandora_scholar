@@ -434,19 +434,19 @@ function convert_mods_to_citeproc_json_page(SimpleXMLElement $mods) {
         if (empty($pages)) {
             $pages = $mods->xpath("//mods:mods[1]/mods:relatedItem/mods:part/mods:extent[@unit='pages']");
         }
-        if (isset($pages[0])) {
-             if (!empty($pages[0]->list)) {
+        if (isset($pages[0]->list) || isset($pages[0]->start)) {
+            if (!empty($pages[0]->list)) {
                 $output = (string) $pages[0]->list;
             } elseif (!empty($pages[0]->start)) {
                 $output = (string) $pages[0]->start;
                 if (!empty($pages[0]->end)) {
                     $output .= "-" . $pages[0]->end;
                 }
-                } elseif (isset($article_number)) {
-                    $output = $article_number;
-                    } elseif (!empty($pages[0]->total)) {
-                        $output = (string) $pages[0]->total . " pp";
-                        }
+            } 
+        } elseif (isset($article_number)) {
+                $output = $article_number;
+        } elseif (!empty($pages[0]->total)) {
+              $output = (string) $pages[0]->total . " pp";
         }
 //    }
     return $output;
