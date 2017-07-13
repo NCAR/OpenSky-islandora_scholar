@@ -475,15 +475,15 @@ function islandora_doi_transform_to_mods($doi_xml) {
                       break;
 
                     case 'resource':
-                      if (!is_null($identifier->firstChild)) {
-                        $uri = $mods->createElement('identifier');
-                        $mods->firstChild->appendChild($uri);
-                        $uri_attribute = $mods->createAttribute('type');
-                        $uri_attribute->value = 'uri';
-                        $uri->appendChild($uri_attribute);
-                        $uri_text = $mods->importNode($identifier->firstChild);
-                        $uri->appendChild($uri_text);
-                      }
+//                      if (!is_null($identifier->firstChild)) {
+//                        $uri = $mods->createElement('identifier');
+//                        $mods->firstChild->appendChild($uri);
+//                        $uri_attribute = $mods->createAttribute('type');
+//                        $uri_attribute->value = 'uri';
+//                        $uri->appendChild($uri_attribute);
+//                        $uri_text = $mods->importNode($identifier->firstChild);
+//                        $uri->appendChild($uri_text);
+//                      }
                       break;
                   }
                 }
