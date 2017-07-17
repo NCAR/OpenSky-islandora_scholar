@@ -251,7 +251,7 @@ function get_document_versions() {
       'Pre-peer reviewed version' => t('Pre-peer reviewed version'),
       'Author\'s final version' => t('Author\'s final version'),
       'Publisher\'s final version' => t('Publisher\'s final version'),
-      ' ' => t('Not Applicable'),        
+      'Not Applicable' => t('Not Applicable'),        
     );
   }
 }
