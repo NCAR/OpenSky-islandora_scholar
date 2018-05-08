@@ -69,6 +69,7 @@ function islandora_doi_perform_request($id_or_url) {
  *   If passed something other than DOMDocument or SimpleXMLElement.
  */
 function islandora_doi_transform_to_mods($doi_xml) {
+    
   // Make sure doi_xml is a DOMDocument. Otherwise show a warning and, if it
   // is a SimpleXMLElement, convert it.
   if ($doi_xml instanceof SimpleXMLElement) {
@@ -147,6 +148,7 @@ function islandora_doi_transform_to_mods($doi_xml) {
         }
       }
     }
+
     foreach ($journal->getElementsByTagName('journal_issue') as $issue) {
       if ($issue->hasChildNodes()) {
         foreach ($issue->childNodes as $child) {
@@ -194,6 +196,7 @@ function islandora_doi_transform_to_mods($doi_xml) {
         }
       }
     }
+
     foreach ($journal->getElementsByTagName('journal_article') as $article) {
       if ($article->hasAttributes()) {
         foreach ($article->attributes as $att) {
@@ -217,6 +220,7 @@ function islandora_doi_transform_to_mods($doi_xml) {
           }
         }
       }
+
       if ($article->hasChildNodes()) {
         foreach ($article->childNodes as $child) {
           switch ($child->nodeName) {
@@ -266,7 +270,6 @@ function islandora_doi_transform_to_mods($doi_xml) {
                 }
               }
               break;
-
             case 'contributors':
               foreach ($child->getElementsByTagName('organization') as $organization) {
                 $name = $mods->createElement('name');
@@ -381,7 +384,6 @@ function islandora_doi_transform_to_mods($doi_xml) {
                 }
               }
               break;
-
             case 'publication_date':
               // Note that this overwrites the publication date that came
               // from the journal metadata above.
@@ -463,7 +465,13 @@ function islandora_doi_transform_to_mods($doi_xml) {
                         $doi->appendChild($doi_attribute);
                         $doi_text = $mods->importNode($identifier->firstChild);
                         $doi->appendChild($doi_text);
-                        $abstract_text = islandora_doi_get_abstract($doi->nodeValue);
+
+                        try {
+                            $abstract_text = islandora_doi_get_abstract($doi->nodeValue);
+                        } catch (Exception $e) {
+                            error_log ('WARN: doi importer could not get abstract: ' . $e->getMessage());
+                        }
+
                         if ($abstract_text) {
                             $abstract = $mods->createElement('abstract');
                             $abstract->nodeValue = $abstract_text;
@@ -627,10 +635,33 @@ function islandora_doi_transform_to_mods($doi_xml) {
 function islandora_doi_get_abstract($id) {
     $auth_url = "http://search.webofknowledge.com/esti/wokmws/ws/WOKMWSAuthenticate?wsdl";
 
-    $auth_client = @new SoapClient($auth_url, array('login' => "NCAR",
-        'password' => "OLCP2YXI"));
-//$auth_client = @new SoapClient($auth_url);
-    $auth_response = $auth_client->authenticate();
+    try {
+        // see http://php.net/manual/en/class.soapclient.php
+        $opts = array(
+            'ssl' => array(
+                'verify_peer'=>false,
+                'verify_peer_name'=>false
+            )
+        );
+        // SOAP 1.2 client
+        $params = array (
+            'login' => "NCAR",
+            'password' => "OLCP2YXI",
+            'stream_context' => stream_context_create($opts)
+        );
+
+        $auth_client = new SoapClient ( $auth_url, $params );
+
+    } catch (Exception $e) {
+        error_log ('ERROR: ' . $e->getErrorMessage());
+    }
+
+    $auth_response = @$auth_client->authenticate();
+
+    if (!$auth_response) {
+        throw new Exception ("Could not authenticate NCAR client for WOS");
+    }
+    
     $search_url = "http://search.webofknowledge.com/esti/wokmws/ws/WokSearch?wsdl";
     $search_client = @new SoapClient($search_url);
     $search_client->__setCookie('SID', $auth_response->return);
@@ -642,7 +673,6 @@ function islandora_doi_get_abstract($id) {
             'userQuery' => 'DO=' . $id,
             'editions' => array(
                 array('collection' => 'WOS', 'edition' => 'SCI')
-#      array('collection' => 'WOS', 'edition' => 'SCI')
             ),
             'queryLanguage' => 'en'
         ),
