@@ -6,6 +6,7 @@ dependencies[] = islandora_solr
 dependencies[] = citeproc
 dependencies[] = csl
 dependencies[] = bibutils
+dependencies[] = opensky
 files[] = includes/citation.tab.inc
 files[] = includes/coins.inc
 files[] = includes/romeo.tab.inc

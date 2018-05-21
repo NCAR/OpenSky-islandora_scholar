@@ -216,10 +216,17 @@ function islandora_scholar_get_metadata_display($object, $weight) {
     $description = islandora_retrieve_description_markup($object);
     $doi_link = islandora_retrieve_doi_markup($object);
 
+    // OpenSky - Insert 'in collections' display from opensky
+    module_load_include('inc', 'opensky', 'includes/utilities');
+    $in_collections = opensky_get_in_collections_display($object);
+
     $display = array(
       '#weight' => $weight,
-      '#markup' => $doi_link . $description . $metadata,
+      // '#markup' => $doi_link . $description . $metadata,
+      '#markup' => $doi_link . $description . $in_collections . $metadata,
     );
+    // ---------------------------
+
   }
   else {
     module_load_include('inc', 'islandora_scholar', 'includes/coins');
