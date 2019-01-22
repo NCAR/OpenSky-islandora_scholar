@@ -615,6 +615,11 @@ function islandora_doi_transform_to_mods($doi_xml) {
 //      }
     }
     // Return after first instance.
+
+    // dpm ("islandora_doi_transform_to_mods");
+    // dpm ($mods->saveXML());
+
+
     return $mods;
   }
 
